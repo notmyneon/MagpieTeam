@@ -5,6 +5,8 @@ on:
     paths: ['data.json', 'game-meta.json', 'scripts/update_results.py', '.github/workflows/results.yml']
 permissions:
   contents: write
+  pages: write
+  id-token: write
 concurrency:
   group: official-results
   cancel-in-progress: false
@@ -12,6 +14,8 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment:
+      name: github-pages
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,3 +29,8 @@ jobs:
           git add results.json results-status.json
           git diff --cached --quiet || git commit -m 'Refresh official NHL game outcomes'
           git push
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - uses: actions/deploy-pages@v4

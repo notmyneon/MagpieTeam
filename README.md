@@ -1,9 +1,9 @@
-# Magpie Team
+# Magpie Hockey Teams
 
-Static GitHub Pages team Magpie site. Upload these files to the root of a public repository named MagpieTeam. In Settings → Pages select Deploy from a branch, main, / (root).
+Five views: Standings, Team Cards, Compare, Games, Timeline. No browser uploads. Shared Magpie Hockey and NHL logo assets are served from the player site. Cards include PNG download controls.
 
-Data automatically loads from data.json on every visit. Only situation=all is included; each team/game appears once. Season is the starting year (2024 means 2024–25). Both regular-season and playoff games are included, matching the original page.
+Statistics use only ALL situation rows. Magpie is the average individual game score: (Blocks + Hits + Takeaways) / (SA per 60 + Goals Against + Penalties Taken) × 10. Shootout deciding goals do not enter this calculation.
 
-Formula: (blocked shots + hits + takeaways) / (shots against per 60 + goals against + penalties taken) × 10. Blocks use blockedShotAttemptsAgainst; penalties use penaltiesFor, not minor counts. Minutes use iceTime / 60. Original season and comparison aggregation is preserved.
+`data.json` contains the game statistics. `game-meta.json` maps row IDs to NHL game ID, goals for and playoff flag. `results.json` stores official NHL winners, ending period and final scores. Regular season and playoffs can be viewed separately. Preseason is available when present. Record totals cover the games present in the dataset.
 
-Card titles and uploaded logos are browser preferences. Hosted statistics do not depend on browser storage. To update statistics, replace data.json in GitHub. This version does not fetch nightly NHL updates.
+The Update official NHL results workflow runs when data or lookup code changes, or manually through Actions. It matches official NHL season schedules by exact game ID, commits cached results, and deploys Pages. Tied statistical goals with no official match stay pending, not ties. All 23,230 games were matched at initial publication.
