@@ -22,8 +22,8 @@ function magpieMatch(r,mode='all'){
 }
 function summarize(selected,team,year,scope){
  if(!selected.length)return null;
- const a={team,year,scope,gp:0,wins:0,losses:0,otl:0,unknown:0,points:0,magpie:0,against:0,hits:0,blocked:0,takeaways:0,goalsFor:0,goalsAgainst:0,soWins:0,soLosses:0};
- for(const r of selected){a.gp++;a.magpie+=r.magpie;a.against+=r.opponentMagpie;for(const k of ['hits','blocked','takeaways','goalsFor','goalsAgainst'])a[k]+=r[k];const o=outcome(r);if(!o)a.unknown++;else if(o.win){a.wins++;a.points+=2;if(o.end==='SO')a.soWins++}else if(r.type!==3&&o.end!=='REG'){a.otl++;a.points++;if(o.end==='SO')a.soLosses++}else a.losses++;}
+ const a={team,year,scope,gp:0,wins:0,losses:0,otl:0,unknown:0,points:0,magpie:0,against:0,hits:0,blocked:0,takeaways:0,goalsFor:0,goalsAgainst:0,soWins:0,soLosses:0,otWins:0,otLosses:0};
+ for(const r of selected){a.gp++;a.magpie+=r.magpie;a.against+=r.opponentMagpie;for(const k of ['hits','blocked','takeaways','goalsFor','goalsAgainst'])a[k]+=r[k];const o=outcome(r);if(o?.end==='OT'){if(o.win)a.otWins++;else a.otLosses++;}if(!o)a.unknown++;else if(o.win){a.wins++;a.points+=2;if(o.end==='SO')a.soWins++}else if(r.type!==3&&o.end!=='REG'){a.otl++;a.points++;if(o.end==='SO')a.soLosses++}else a.losses++;}
  a.magpie/=a.gp;a.against/=a.gp;a.pct=a.unknown?NaN:a.wins/a.gp*100;
  for(const k of ['hits','blocked','takeaways'])a[k+'PerGame']=a[k]/a.gp;return a;
 }
@@ -65,10 +65,18 @@ function renderStandings(){
  $('summary').innerHTML=`<div><span class="eyebrow">${chosen==='NHL'?'LEAGUE MAGPIE FOR':'MAGPIE LEADER'}</span><strong>${lead?f(lead.magpie):'—'}</strong><small>${lead?esc(title(lead.team,lead.year)):'No games'}</small></div><div><span class="eyebrow">${chosen==='NHL'?'LEAGUE MAGPIE AGAINST':'LOWEST AGAINST'}</span><strong>${low?f(low.against):'—'}</strong><small>${low?esc(title(low.team,low.year)):'No games'}</small></div><div><span class="eyebrow">GAMES IN VIEW</span><strong>${f(count,0)}</strong><small>${esc(seasonLabel(year))} · ${$('magpieFilter').selectedOptions[0].text}</small></div>`;
 }
 
-function renderTeam(){const year=$('season').value,scope=$('scope').value,a=aggregates(year).find(a=>a.team===$('team').value);if(!a){$('teamCard').innerHTML='<p class="empty">No games in this view.</p>';$('teamGames').innerHTML='';return}
- const ranks=aggregates(a.year).slice().sort((a,b)=>b.magpie-a.magpie),led=aggregates(year,scope,'leading').find(x=>x.team===a.team),trailed=aggregates(year,scope,'trailing').find(x=>x.team===a.team);
- $('teamCard').innerHTML=`<div class="profile-heading"><div class="profile">${logo(a.team)}<div><h2>${esc(title(a.team,a.year))}</h2><span class="eyebrow">${seasonLabel(a.year)} · ${$('scope').selectedOptions[0].text}</span><p class="record" style="margin-top:12px">${record(a)} <small>${pts(a)} points · ${f(a.pct,1)}% wins</small></p></div></div>${brand()}</div><div class="metrics">${metric('Magpie For',f(a.magpie),'League rank '+(ranks.indexOf(a)+1))}${metric('Magpie Against',f(a.against),'Opponent average')}${metric('Record when leading',record(led),led?f(led.pct,1)+'% wins':'No games')}${metric('Record when trailing',record(trailed),trailed?f(trailed.pct,1)+'% wins':'No games')}${metric('Hits',f(a.hits,0))}${metric('Blocked shots',f(a.blocked,0))}${metric('Takeaways',f(a.takeaways,0))}${metric('Shootouts',a.soWins+'–'+a.soLosses,'W–L')}${metric('Goal differential',f(a.goalsFor-a.goalsAgainst,0),'Excludes shootout deciding goal')}</div>${a.unknown?'<p class="note">* '+a.unknown+' game outcomes await official lookup.</p>':''}`;
- $('teamCard').querySelectorAll('.metric').forEach((m,i)=>{if(i===2||i===3)m.classList.add('record-metric')});
+function leagueRankNote(target,league,value,lower=false,recordMetric=false){
+ const eligible=league.filter(x=>Number.isFinite(value(x))),v=target?value(target):NaN;
+ if(!Number.isFinite(v))return 'League rank —';
+ const rank=1+eligible.filter(x=>lower?value(x)<v-1e-9:value(x)>v+1e-9).length;
+ return `League rank ${rank}/${eligible.length}${recordMetric?' · '+f(v,1)+'% wins':''}`;
+}
+function renderTeam(){const year=$('season').value,scope=$('scope').value,league=aggregates(year),a=league.find(a=>a.team===$('team').value);if(!a){$('teamCard').innerHTML='<p class="empty">No games in this view.</p>';$('teamGames').innerHTML='';return}
+ const leading=aggregates(year,scope,'leading'),trailing=aggregates(year,scope,'trailing'),led=leading.find(x=>x.team===a.team),trailed=trailing.find(x=>x.team===a.team),playoffs=scope==='playoffs';
+ const specialWins=x=>playoffs?x.otWins:x.soWins,specialLosses=x=>playoffs?x.otLosses:x.soLosses,specialPct=x=>specialWins(x)+specialLosses(x)?specialWins(x)/(specialWins(x)+specialLosses(x))*100:NaN;
+ const note=(target,group,value,lower=false,isRecord=false)=>leagueRankNote(target,group,value,lower,isRecord);
+ $('teamCard').innerHTML=`<div class="profile-heading"><div class="profile">${logo(a.team)}<div><h2>${esc(title(a.team,a.year))}</h2><span class="eyebrow">${seasonLabel(a.year)} · ${$('scope').selectedOptions[0].text}</span><p class="record" style="margin-top:12px">${record(a)} <small>${pts(a)} points · ${f(a.pct,1)}% wins</small></p></div></div>${brand()}</div><div class="metrics">${metric('Magpie For',f(a.magpie),note(a,league,x=>x.magpie))}${metric('Magpie Against',f(a.against),note(a,league,x=>x.against,true))}${metric('Magpie Differential',f(a.magpie-a.against),note(a,league,x=>x.magpie-x.against))}${metric('Record while leading',record(led),note(led,leading,x=>x.pct,false,true))}${metric('Record while trailing',record(trailed),note(trailed,trailing,x=>x.pct,false,true))}${metric(playoffs?'OT Record':'Shootout Record',specialWins(a)+'–'+specialLosses(a),note(a,league,specialPct,false,true))}${metric('Hits',f(a.hits,0),note(a,league,x=>x.hits))}${metric('Blocked shots',f(a.blocked,0),note(a,league,x=>x.blocked))}${metric('Takeaways',f(a.takeaways,0),note(a,league,x=>x.takeaways))}</div>${a.unknown?'<p class="note">* '+a.unknown+' game outcomes await official lookup.</p>':''}`;
+ $('teamCard').querySelectorAll('.metric').forEach((m,i)=>{if(i>=3&&i<=5)m.classList.add('record-metric')});
  const log=rows.filter(r=>r.team===a.team&&included(r,a.year)).sort((a,b)=>b.date.localeCompare(a.date));$('teamGames').innerHTML=gameTable(log);
 }
 
