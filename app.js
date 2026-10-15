@@ -107,7 +107,12 @@ function renderCompare(){
  $('compareCard').innerHTML=cardHeader('Team Comparison','')+`<div class="compare-grid">${side(a,'A')}${side(b,'B')}</div>`+metrics.map(([label,k,d,lower])=>{const v=a[k],w=b[k],known=Number.isFinite(v)&&Number.isFinite(w)&&!(k==='points'&&(a.unknown||b.unknown));return `<div class="comparison-row"><span class="${known&&(lower?v<w:v>w)?'gold':''}">${k==='points'?pts(a):f(v,d)}</span><span>${label}</span><span class="${known&&(lower?w<v:w>v)?'gold':''}">${k==='points'?pts(b):f(w,d)}</span></div>`}).join('')+['leading','trailing'].map(mode=>{const x=aggregates(a.year,a.scope,mode).find(t=>t.team===a.team),y=aggregates(b.year,b.scope,mode).find(t=>t.team===b.team),known=x&&y&&Number.isFinite(x.pct)&&Number.isFinite(y.pct);return `<div class="comparison-row"><span class="${known&&x.pct>y.pct?'gold':''}">${record(x)}</span><span>Record while ${mode}</span><span class="${known&&y.pct>x.pct?'gold':''}">${record(y)}</span></div>`}).join('');
 }
 
-function renderGames(){const log=rows.filter(r=>r.team===$('gameTeam').value&&included(r,$('season').value)).sort((a,b)=>b.date.localeCompare(a.date));options($('game'),log.map(r=>r.id),undefined,id=>{const r=log.find(r=>r.id===id);return r.date+' · '+title(r.team,r.year)+' vs '+title(r.opponent,r.year)});renderGameCard();renderCombined();}
+function renderGames(){
+ const log=rows.filter(r=>r.team===$('gameTeam').value&&included(r,$('season').value)).sort((a,b)=>String(b.date??'').localeCompare(String(a.date??'')));
+ options($('game'),log.map(r=>r.id),undefined,id=>{const r=log.find(r=>r.id===id);return String(r?.date??'Unknown date')+' · '+title(r.team,r.year)+' vs '+title(r.opponent,r.year)});
+ try{renderGameCard()}catch(e){console.error('Game recap failed',e);$('gameCard').textContent='Game recap could not be displayed: '+e.message}
+ try{renderCombined()}catch(e){console.error('Combined games failed',e);$('combinedCard').textContent='Combined games could not be displayed: '+e.message}
+}
 function rankingScope(){return $('rankingScope').value==='both'?'both':$('rankingScope').value||'regular'}
 function rankingIncluded(r){const scope=rankingScope();return scope==='both'?(r.type===2||r.type===3):included(r,r.year,scope)}
 function populateRankingTeams(){const teams=[...new Set(rows.filter(r=>rankingYears.has(r.year)&&rankingIncluded(r)).map(r=>r.team))].sort((a,b)=>title(a).localeCompare(title(b)));options($('rankingTeamA'),['',...teams],undefined,t=>t?title(t):'All teams');const a=$('rankingTeamA').value;options($('rankingTeamB'),['',...teams.filter(t=>t!==a)],undefined,t=>t?title(t):'All opponents');$('rankingTeamB').disabled=!a;if(!a)$('rankingTeamB').value='';}
