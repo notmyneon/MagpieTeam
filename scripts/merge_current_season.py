@@ -14,6 +14,8 @@ new=[]
 for a in records:
  team,game,opponent,date,seconds,shots,ga,penalties,blocks,hits,takeaways,gf=a
  game=str(int(game))
+ date=str(int(date))
+ date=f'{date[:4]}-{date[4:6]}-{date[6:]}'
  rid=f'{team}-{game}'
  new.append({'id':rid,'year':'2026','date':date,'opponent':opponent,
  'minutes':seconds/60,'shotsAgainst':shots,'goalsAgainst':ga,
