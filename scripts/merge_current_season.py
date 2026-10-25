@@ -8,7 +8,10 @@ if not source.exists():
 records=json.loads(gzip.decompress(base64.b64decode(source.read_text().strip())))
 data_path=root/'data.json'; meta_path=root/'game-meta.json'
 data=json.loads(data_path.read_text()); meta=json.loads(meta_path.read_text())
-assert len(records)==210 and len({str(a[1]) for a in records})==105
+assert records and all(len(a)==12 for a in records)
+assert len({(a[0],str(a[1])) for a in records})==len(records)
+from collections import Counter
+assert set(Counter(str(a[1]) for a in records).values())=={2}
 # The official game ID is carried in the existing row key after the team prefix.
 new=[]
 for a in records:
@@ -25,7 +28,7 @@ existing={r['id']:r for r in data}
 for r in new: existing[r['id']]=r
 data=list(existing.values())
 assert all(r['id'] in meta for r in data)
-assert sum(r['year']=='2026' for r in data)==210
+assert sum(r['year']=='2026' for r in data)==len(records)
 data_path.write_text(json.dumps(data,separators=(',',':'))+'\n')
 meta_path.write_text(json.dumps(meta,separators=(',',':'))+'\n')
 print(f'Merged {len(new)} 2026 team-game records; {len(data)} total records')
