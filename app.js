@@ -159,10 +159,36 @@ function renderTimeline(){const metric=$('metric').value,a=$('timelineA').value,
  for(const [s,color] of [[sa,'#57e2c2'],[sb,'#ffd16c']]){let prev=null;for(const p of s){if(prev)svg+=`<line x1="${x(prev.year)}" y1="${y(prev.a[metric])}" x2="${x(p.year)}" y2="${y(p.a[metric])}" stroke="${color}" stroke-width="3" ${+p.year===+prev.year+1?'':'stroke-dasharray="7 6"'}/>`;svg+=`<circle cx="${x(p.year)}" cy="${y(p.a[metric])}" r="5" fill="${color}"><title>${esc(title(p.a.team,p.year))} · ${seasonLabel(p.year)}: ${f(p.a[metric])}</title></circle>`;prev=p}}
  $('timelineCard').innerHTML=cardHeader($('metric').selectedOptions[0].text+' · Season Timeline',$('scope').selectedOptions[0].text)+`<div class="legend"><div class="legend-item">${logo(a)}<span>${esc(title(a,$('season').value))}</span></div>${b?`<div class="legend-item compare-legend">${b==='NHL'?'<span class="league-mark">NHL</span>':logo(b)}<span>${b==='NHL'?'League average':esc(title(b,$('season').value))}</span></div>`:''}</div><div class="chart-wrap"><svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc($('metric').selectedOptions[0].text)} by season">${svg}</svg></div>`;
 }
+function waitForPngAsset(promise,ms=2000){
+ return new Promise(resolve=>{const timer=setTimeout(()=>resolve(undefined),ms);Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},()=>{clearTimeout(timer);resolve(undefined)});});
+}
+const pngPlaceholder='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+async function preparePngAssets(copy){
+ await Promise.all([waitForPngAsset(document.fonts.ready),...Array.from(copy.querySelectorAll('img'),async img=>{
+   if(!img.getAttribute('src'))return;
+   img.loading='eager';
+   const ready=await waitForPngAsset(img.decode().then(()=>true));
+   if(!ready){img.removeAttribute('srcset');img.src=pngPlaceholder;}
+ })]);
+ const fontEmbedCSS=await waitForPngAsset(window.htmlToImage.getFontEmbedCSS(copy),2500);
+ return {fontEmbedCSS,skipFonts:!fontEmbedCSS,imagePlaceholder:pngPlaceholder};
+}
+function offerPng(status,blob,filename){
+ const url=URL.createObjectURL(blob);
+ const link=document.createElement('a');
+ link.href=url;link.download=filename;link.textContent='Save PNG';link.style.color='inherit';link.style.textDecoration='underline';
+ status.replaceChildren(document.createTextNode('PNG ready. '),link);
+ status.dataset.pngUrl=url;
+ link.click();
+}
+function clearPngLink(status){
+ if(status.dataset.pngUrl){URL.revokeObjectURL(status.dataset.pngUrl);delete status.dataset.pngUrl;}
+ status.replaceChildren();
+}
 async function exportCard(button){
- const card=$(button.dataset.export),status=button.parentElement.querySelector('.export-status');button.disabled=true;status.textContent='Creating image…';
+ const card=$(button.dataset.export),status=button.parentElement.querySelector('.export-status');if(!card||button.disabled)return;clearPngLink(status);button.disabled=true;status.textContent='Creating image…';
  const stage=document.createElement('div');stage.style.cssText='position:fixed;left:-20000px;top:0;width:1000px';
- try{if(!window.htmlToImage)throw Error('Image renderer unavailable');const copy=card.cloneNode(true);copy.style.width='1000px';copy.style.maxWidth='none';stage.append(copy);document.body.append(stage);await document.fonts.ready;await Promise.all([...copy.querySelectorAll('img')].map(img=>img.decode().catch(()=>{})));const height=Math.ceil(copy.getBoundingClientRect().height);const canvas=await window.htmlToImage.toCanvas(copy,{width:1000,height,pixelRatio:1.5,backgroundColor:'#101c20'});const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw Error('Image encoding failed');const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=button.dataset.export==='standingsCard'?['magpie-standings',$('season').value,$('scope').value,$('standingsCardFilter').value,$('standingsCardOrder').value,$('standingsCardMetric').value].join('-')+'.png':'magpie-'+button.dataset.export+'-'+$('season').value+'.png';link.click();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='Image downloaded';}catch(e){status.textContent='Could not create the image. '+e.message}finally{stage.remove();button.disabled=false}
+ try{if(!window.htmlToImage)throw Error('Image renderer unavailable');const copy=card.cloneNode(true);copy.style.width='1000px';copy.style.maxWidth='none';stage.append(copy);document.body.append(stage);const assets=await preparePngAssets(copy);const height=Math.ceil(copy.getBoundingClientRect().height);const canvas=await window.htmlToImage.toCanvas(copy,{width:1000,height,pixelRatio:1.5,backgroundColor:'#101c20',...assets});const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw Error('Image encoding failed');const filename=button.dataset.export==='standingsCard'?['magpie-standings',$('season').value,$('scope').value,$('standingsCardFilter').value,$('standingsCardOrder').value,$('standingsCardMetric').value].join('-')+'.png':'magpie-'+button.dataset.export+'-'+$('season').value+'.png';offerPng(status,blob,filename);}catch(e){status.textContent='Could not create the image. '+e.message}finally{stage.remove();button.disabled=false}
 }
 async function init(){try{const [d,m]=await Promise.all(['data.json','game-meta.json'].map(async p=>{const res=await fetch(p,{cache:'no-store'});if(!res.ok)throw Error(p+' '+res.status);return res.json()}));try{const res=await fetch('results.json',{cache:'no-store'});if(res.ok)results=await res.json()}catch(_){results={}}
  rows=d.map(r=>{const meta=m[r.id];if(!meta)throw Error('Missing metadata for '+r.id);const team=code(r.id.split('-')[0]),official=results[meta[0]],opponent=official?(code(official[4])===team?code(official[5]):code(official[4])):code(r.opponent);return {...r,team,opponent,gameId:meta[0],goalsFor:meta[1],type:+meta[0].slice(4,6),magpie:score(r)}});const paired=new Map(rows.map(r=>[r.gameId+'|'+r.team,r]));for(const r of rows)r.opponentMagpie=paired.get(r.gameId+'|'+r.opponent)?.magpie??NaN;
@@ -171,6 +197,7 @@ async function init(){try{const [d,m]=await Promise.all(['data.json','game-meta.
  document.querySelectorAll('[data-export]').forEach(b=>b.onclick=()=>exportCard(b));document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('season').onchange=()=>{populateTeams();renderVisible()};$('scope').onchange=()=>{populateTeams();populateRankingTeams();renderVisible()};for(const id of ['standingsTeam','magpieFilter'])$(id).onchange=renderStandings;for(const id of ['standingsCardMetric','standingsCardOrder','standingsCardFilter'])$(id).onchange=renderStandingsCard;document.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{const k=b.dataset.sort;if(sortKey===k)sortDir=sortDir==='asc'?'desc':'asc';else{sortKey=k;sortDir=['team','rank','against','losses','otl'].includes(k)?'asc':'desc'}renderStandings()});$('team').onchange=renderTeam;for(const id of ['yearA','yearB','scopeA','scopeB'])$(id).onchange=()=>{syncCompare();renderCompare()};for(const id of ['compareA','compareB'])$(id).onchange=renderCompare;$('similarYear').onchange=()=>{syncSimilarTeam();renderSimilar()};$('similarScope').onchange=()=>{$('similarMinGames').value=$('similarScope').value==='playoffs'?'4':'20';syncSimilarTeam();renderSimilar()};for(const id of ['similarTeam','similarPool','similarCount','similarRecords','similarStats'])$(id).onchange=renderSimilar;$('similarFocus').oninput=renderSimilar;$('similarMinGames').oninput=renderSimilar;$('gameTeam').onchange=renderGames;$('game').onchange=renderGameCard;$('rankingScope').onchange=()=>{populateRankingTeams();renderCombined()};$('rankingTeamA').onchange=()=>{populateRankingTeams();renderCombined()};for(const id of ['rankingTeamB','rankingOrder','rankingCount'])$(id).onchange=renderCombined;$('allRankingYears').onclick=()=>{rankingYears=new Set(rankingYears.size===years.length?[]:years);renderRankingYears();populateRankingTeams();renderCombined()};for(const id of ['timelineA','timelineB','metric'])$(id).onchange=renderTimeline;window.onhashchange=()=>setView(location.hash.slice(1));const pending=rows.filter(r=>!outcome(r)).length;$('status').textContent=`${rows.length.toLocaleString()} team-game records · ${Object.keys(results).length.toLocaleString()} official results matched${pending?' · '+pending.toLocaleString()+' team outcomes awaiting lookup':''}`;setView(location.hash.slice(1));
  }catch(e){console.error(e);$('status').textContent='Could not load team data. Refresh to retry. '+e.message}}
 init();
+
 
 
 
