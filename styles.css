@@ -30,3 +30,34 @@ th button{font:inherit;text-transform:inherit;letter-spacing:inherit;background:
 #similarCard .season-cup,#compareCard .season-cup{color:#ffd16b}
 .season-key{display:flex;justify-content:center;flex-wrap:wrap;gap:20px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:12px}
 .season-key span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px}
+
+/* Larger comparison entries: identity and match above a readable stat strip. */
+#similarCard{max-width:1400px;padding:28px}
+#similarCard .team-sim-stats span{font-size:14px}
+#similarCard .team-sim-stats strong{font-size:32px}
+#similarCard .team-sim-stats>div{padding:12px 14px}
+.team-sim-feature span{font-size:14px}.team-sim-record{font-size:16px}
+.team-sim-compact-columns{gap:28px;margin-top:22px}
+.readable-matches{min-width:0;width:100%;table-layout:fixed}
+.readable-matches td{padding:0!important;height:auto!important;white-space:normal}
+.readable-match{padding:18px 0}
+.readable-match-heading{display:flex;gap:10px;align-items:center}
+.readable-rank{font-size:14px;color:var(--muted);min-width:18px}
+.readable-match-heading>.team-logo{width:34px;height:34px;flex:0 0 34px}
+.readable-team{min-width:0;flex:1}
+.readable-team>strong{display:block;font:700 18px/1.25 Arial,sans-serif}
+.readable-team>span{display:block;margin-top:5px;color:var(--muted);font-size:13px}
+.readable-score{text-align:right;flex:0 0 76px}
+.readable-score>strong{display:block;color:var(--mint);font:800 28px/1.1 'Barlow Condensed',sans-serif}
+.readable-score>span{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+.readable-record{font-size:14px;margin:10px 0 14px 72px;font-weight:700}
+.readable-record>span{color:var(--muted);font-weight:400}
+.readable-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.readable-stats>div{border-left:1px solid var(--line);padding-left:10px;min-width:0}
+.readable-stats>div:first-child{border-left:0;padding-left:0}
+.readable-stats span{display:block;font-size:12px;line-height:1.3;color:var(--muted)}
+.readable-stats strong{display:block;font:700 19px/1.3 Arial,sans-serif;margin-top:5px}
+.readable-stats>div:nth-child(-n+2) strong{color:var(--mint)}
+.season-key{font-size:14px}
+@media(max-width:1000px){.team-sim-compact-columns{grid-template-columns:1fr}.readable-stats span{font-size:14px}}
+@media(max-width:520px){#similarCard{padding:16px}.readable-team>strong{font-size:16px}.readable-score{flex-basis:62px}.readable-match-heading{gap:7px}.readable-record{margin-left:0}.readable-stats{gap:5px}.readable-stats>div{padding-left:5px}.readable-stats span{font-size:12px}.readable-stats strong{font-size:17px}#similarCard .team-sim-stats{grid-template-columns:repeat(3,minmax(0,1fr))}#similarCard .team-sim-stats span{font-size:12px}#similarCard .team-sim-stats strong{font-size:27px}}
