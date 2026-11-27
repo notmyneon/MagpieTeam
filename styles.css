@@ -23,3 +23,12 @@ th button{font:inherit;text-transform:inherit;letter-spacing:inherit;background:
 
 
 .team-sim-compact-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:18px}.team-sim-column-scroll{overflow-x:auto;min-width:0}.team-sim-compact-table{min-width:430px}.team-sim-compact-table .comparable-rank-col{width:18px}.team-sim-compact-table .comparable-number-col{width:43px}.team-sim-compact-table th{font-size:7px;padding:7px 3px;letter-spacing:0}.team-sim-compact-table th small{font-size:7px;margin-top:2px}.team-sim-compact-table td{padding:7px 3px;font-size:10px;height:60px}.team-sim-compact-table .team-comparable-name{gap:6px;align-items:center}.team-sim-compact-table .team-comparable-name .team-logo{width:23px;height:23px;flex-basis:23px}.team-sim-compact-table .team-comparable-name strong{font-size:11px;line-height:1.2}.team-sim-compact-table .team-comparable-name small{font-size:8px;line-height:1.25;margin-top:3px}.team-sim-compact-table .team-comparable-match{font-size:14px}.team-sim-compact-table .team-comparable-magpie{font-size:10px}.team-sim-record{font-size:12px;font-weight:700;color:var(--gold);margin:5px 0 0}@media(max-width:760px){.team-sim-compact-columns{grid-template-columns:1fr;gap:12px}.team-sim-compact-table{min-width:430px}}
+
+
+/* Compact season distinctions in both comparison cards and PNG exports. */
+.season-badges{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0}
+.season-badge{display:inline-flex;align-items:center;padding:3px 6px;border:1px solid #30cdb488;border-radius:5px;background:#123c36;color:#90f0db;font:600 12px/1.2 Arial,sans-serif;white-space:nowrap}
+.cup-badge{border-color:#dbb554;background:#3b3015;color:#ffe39a}
+.compare-team .season-badges{justify-content:center}
+
+.team-sim-feature .playoff-badge{color:#90f0db}.team-sim-feature .cup-badge{color:#ffe39a}

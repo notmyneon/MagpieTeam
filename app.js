@@ -16,6 +16,30 @@ function outcome(r){
  if(r.goalsFor!==r.goalsAgainst)return {win:r.goalsFor>r.goalsAgainst,end:r.minutes>60.01?'OT':'REG',official:false,goals:r.goalsFor,oppGoals:r.goalsAgainst};
  return null;
 }
+// Season honours come from playoff games, independently of the selected comparison scope.
+// Round zero in 2019–20 was the qualifying round, rather than the Stanley Cup playoffs.
+let seasonHonours=new Map();
+function buildSeasonHonours(){
+ seasonHonours=new Map();const finalWins=new Map(),seen=new Set();
+ for(const r of rows){
+  if(r.type!==3)continue;
+  const round=Number(String(r.gameId).slice(6,8));
+  if(round<1||round>4)continue;
+  const key=r.year+'|'+r.team;
+  if(!seasonHonours.has(key))seasonHonours.set(key,{playoffs:true,cup:false});
+  const id=r.gameId+'|'+r.team;
+  if(round===4&&!seen.has(id)){seen.add(id);if(outcome(r)?.win)finalWins.set(key,(finalWins.get(key)||0)+1);}
+ }
+ for(const [key,wins] of finalWins)if(wins===4)seasonHonours.get(key).cup=true;
+ // The source export omits the 2011 Final Game 7. NHL official season record:
+ // https://records.nhl.com/playoff-summary/stanley-cup-winner?season=20102011
+ if(seasonHonours.has('2010|BOS'))seasonHonours.get('2010|BOS').cup=true;
+}
+function seasonBadges(team,year){
+ const honour=seasonHonours.get(year+'|'+team);
+ if(!honour)return '';
+ return `<span class="season-badges"><span class="season-badge playoff-badge">Playoffs</span>${honour.cup?'<span class="season-badge cup-badge">🏆 Stanley Cup</span>':''}</span>`;
+}
 function magpieMatch(r,mode='all'){
  if(mode==='all')return true;if(!Number.isFinite(r.magpie)||!Number.isFinite(r.opponentMagpie))return false;
  const d=r.magpie-r.opponentMagpie;return mode==='leading'?d>1e-9:mode==='trailing'?d< -1e-9:Math.abs(d)<=1e-9;
@@ -119,15 +143,15 @@ function renderSimilar(){
  const min=Math.max(1,Math.min(200,Math.floor(+$('similarMinGames').value)||1)),scopes=$('similarPool').value==='both'?['regular','playoffs']:[scope];
  const candidates=years.flatMap(y=>scopes.flatMap(sc=>aggregates(y,sc))).filter(a=>a.gp>=min).map(comparableProfile),matches=findComparableTeams(reference,candidates,records,profile,focus).slice(0,+$('similarCount').value||10),scopeLabel=sc=>sc==='playoffs'?'Playoffs':'Regular season';
  const stats=a=>`<div class="team-sim-stats">${[['Magpie For',a.magpie],['Magpie Against',a.against],['Hits / 60',a.hits60],['Blocks / 60',a.blocked60],['Takeaways / 60',a.takeaways60]].map(([label,value])=>`<div><span>${label}</span><strong>${f(value)}</strong></div>`).join('')}</div>`;
- const matchRow=(a,i)=>`<tr><td class="team-comparable-rank">${i+1}</td><td><div class="team-comparable-name">${logo(a.team)}<div><strong>${esc(title(a.team,a.year))}</strong><small>${seasonLabel(a.year)} · ${a.scope==='playoffs'?'PO':'RS'}</small><small>${record(a)} · ${f(a.pointsPct,1)} Pts%</small></div></div></td><td class="team-comparable-match">${f(a.similarityIndex,1)}</td><td class="team-comparable-magpie">${f(a.magpie)}</td><td class="team-comparable-magpie">${f(a.against)}</td><td>${f(a.hits60)}</td><td>${f(a.blocked60)}</td><td>${f(a.takeaways60)}</td></tr>`;
+ const matchRow=(a,i)=>`<tr><td class="team-comparable-rank">${i+1}</td><td><div class="team-comparable-name">${logo(a.team)}<div><strong>${esc(title(a.team,a.year))}</strong>${seasonBadges(a.team,a.year)}<small>${seasonLabel(a.year)} · ${a.scope==='playoffs'?'PO':'RS'}</small><small>${record(a)} · ${f(a.pointsPct,1)} Pts%</small></div></div></td><td class="team-comparable-match">${f(a.similarityIndex,1)}</td><td class="team-comparable-magpie">${f(a.magpie)}</td><td class="team-comparable-magpie">${f(a.against)}</td><td>${f(a.hits60)}</td><td>${f(a.blocked60)}</td><td>${f(a.takeaways60)}</td></tr>`;
  const column=(rs,offset)=>`<div class="team-sim-column-scroll"><table class="team-comparables-table team-sim-compact-table"><colgroup><col class="comparable-rank-col"><col><col class="comparable-number-col"><col class="comparable-number-col"><col class="comparable-number-col"><col class="comparable-number-col"><col class="comparable-number-col"><col class="comparable-number-col"></colgroup><thead><tr><th>#</th><th>TEAM / SEASON</th><th>MATCH</th><th>MAG<small>FOR</small></th><th>MAG<small>AG</small></th><th>HIT<small>/60</small></th><th>BLK<small>/60</small></th><th>TKA<small>/60</small></th></tr></thead><tbody>${rs.map((r,i)=>matchRow(r,offset+i)).join('')}</tbody></table></div>`;
  const mid=Math.ceil(matches.length/2);
- $('similarCard').innerHTML=`<div class="card-header team-sim-header"><div><span class="eyebrow">${seasonLabel(year)} · ${scopeLabel(scope)}</span><div class="card-title">Team Comparables</div></div>${brand()}</div><div class="team-sim-feature">${logo(team)}<div><h3>${esc(title(team,year))}</h3><span>${seasonLabel(year)} · ${scopeLabel(scope)} · ${reference.gp} GP</span><p class="team-sim-record">${record(reference)} · ${f(reference.pointsPct,1)} Pts%</p></div></div>${stats(reference)}<div class="team-sim-compact-columns">${matches.length?column(matches.slice(0,mid),0)+(matches.length>mid?column(matches.slice(mid),mid):''):'<p class="empty">No matches meet the minimum-games filter.</p>'}</div>`;
+ $('similarCard').innerHTML=`<div class="card-header team-sim-header"><div><span class="eyebrow">${seasonLabel(year)} · ${scopeLabel(scope)}</span><div class="card-title">Team Comparables</div></div>${brand()}</div><div class="team-sim-feature">${logo(team)}<div><h3>${esc(title(team,year))}</h3>${seasonBadges(team,year)}<span>${seasonLabel(year)} · ${scopeLabel(scope)} · ${reference.gp} GP</span><p class="team-sim-record">${record(reference)} · ${f(reference.pointsPct,1)} Pts%</p></div></div>${stats(reference)}<div class="team-sim-compact-columns">${matches.length?column(matches.slice(0,mid),0)+(matches.length>mid?column(matches.slice(mid),mid):''):'<p class="empty">No matches meet the minimum-games filter.</p>'}</div>`;
 }
 
 function renderCompare(){
  const a=aggregates($('yearA').value,$('scopeA').value).find(a=>a.team===$('compareA').value),b=aggregates($('yearB').value,$('scopeB').value).find(a=>a.team===$('compareB').value);if(!a||!b){$('compareCard').innerHTML='<p class="empty">Choose teams with games in each selected season and competition.</p>';return}
- const side=(a,suffix)=>`<div class="compare-team">${logo(a.team)}<h3>${esc(title(a.team,a.year))}</h3><span class="eyebrow">${seasonLabel(a.year)} · ${$('scope'+suffix).selectedOptions[0].text}</span><p class="record" style="margin-top:12px">${record(a)}</p></div>`;
+ const side=(a,suffix)=>`<div class="compare-team">${logo(a.team)}<h3>${esc(title(a.team,a.year))}</h3>${seasonBadges(a.team,a.year)}<span class="eyebrow">${seasonLabel(a.year)} · ${$('scope'+suffix).selectedOptions[0].text}</span><p class="record" style="margin-top:12px">${record(a)}</p></div>`;
  const metrics=[['Magpie For','magpie',2,false],['Magpie Against','against',2,true],['Hits / game','hitsPerGame',2,false],['Blocks / game','blockedPerGame',2,false],['Takeaways / game','takeawaysPerGame',2,false]];
  $('compareCard').innerHTML=cardHeader('Team Comparison','')+`<div class="compare-grid">${side(a,'A')}${side(b,'B')}</div>`+metrics.map(([label,k,d,lower])=>{const v=a[k],w=b[k],known=Number.isFinite(v)&&Number.isFinite(w)&&!(k==='points'&&(a.unknown||b.unknown));return `<div class="comparison-row"><span class="${known&&(lower?v<w:v>w)?'gold':''}">${k==='points'?pts(a):f(v,d)}</span><span>${label}</span><span class="${known&&(lower?w<v:w>v)?'gold':''}">${k==='points'?pts(b):f(w,d)}</span></div>`}).join('')+['leading','trailing'].map(mode=>{const x=aggregates(a.year,a.scope,mode).find(t=>t.team===a.team),y=aggregates(b.year,b.scope,mode).find(t=>t.team===b.team),known=x&&y&&Number.isFinite(x.pct)&&Number.isFinite(y.pct);return `<div class="comparison-row"><span class="${known&&x.pct>y.pct?'gold':''}">${record(x)}</span><span>Record while ${mode}</span><span class="${known&&y.pct>x.pct?'gold':''}">${record(y)}</span></div>`}).join('');
 }
@@ -193,10 +217,12 @@ async function exportCard(button){
 async function init(){try{const [d,m]=await Promise.all(['data.json','game-meta.json'].map(async p=>{const res=await fetch(p,{cache:'no-store'});if(!res.ok)throw Error(p+' '+res.status);return res.json()}));try{const res=await fetch('results.json',{cache:'no-store'});if(res.ok)results=await res.json()}catch(_){results={}}
  rows=d.map(r=>{const meta=m[r.id];if(!meta)throw Error('Missing metadata for '+r.id);const team=code(r.id.split('-')[0]),official=results[meta[0]],opponent=official?(code(official[4])===team?code(official[5]):code(official[4])):code(r.opponent);return {...r,team,opponent,gameId:meta[0],goalsFor:meta[1],type:+meta[0].slice(4,6),magpie:score(r)}});const paired=new Map(rows.map(r=>[r.gameId+'|'+r.team,r]));for(const r of rows)r.opponentMagpie=paired.get(r.gameId+'|'+r.opponent)?.magpie??NaN;
  await loadTeamSimilarityStats();
+ buildSeasonHonours();
  years=[...new Set(rows.map(r=>r.year))].sort((a,b)=>+b-+a);const defaultYear=years[0];for(const id of ['season','yearA','yearB','similarYear'])options($(id),years,defaultYear,seasonLabel);if(rows.some(r=>r.type===1))$('scope').insertAdjacentHTML('beforeend','<option value="preseason">Preseason</option>');populateTeams();syncSimilarTeam();rankingYears=new Set([defaultYear]);renderRankingYears();populateRankingTeams();const allTeams=[...new Set(rows.map(r=>r.team))].sort((a,b)=>title(a).localeCompare(title(b)));options($('timelineA'),allTeams,'CGY',t=>title(t));options($('timelineB'),['','NHL',...allTeams],'NHL',t=>t==='NHL'?'League average':t?title(t):'No comparison');$('compareB').selectedIndex=Math.min(1,$('compareB').options.length-1);
  document.querySelectorAll('[data-export]').forEach(b=>b.onclick=()=>exportCard(b));document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));$('season').onchange=()=>{populateTeams();renderVisible()};$('scope').onchange=()=>{populateTeams();populateRankingTeams();renderVisible()};for(const id of ['standingsTeam','magpieFilter'])$(id).onchange=renderStandings;for(const id of ['standingsCardMetric','standingsCardOrder','standingsCardFilter'])$(id).onchange=renderStandingsCard;document.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{const k=b.dataset.sort;if(sortKey===k)sortDir=sortDir==='asc'?'desc':'asc';else{sortKey=k;sortDir=['team','rank','against','losses','otl'].includes(k)?'asc':'desc'}renderStandings()});$('team').onchange=renderTeam;for(const id of ['yearA','yearB','scopeA','scopeB'])$(id).onchange=()=>{syncCompare();renderCompare()};for(const id of ['compareA','compareB'])$(id).onchange=renderCompare;$('similarYear').onchange=()=>{syncSimilarTeam();renderSimilar()};$('similarScope').onchange=()=>{$('similarMinGames').value=$('similarScope').value==='playoffs'?'4':'20';syncSimilarTeam();renderSimilar()};for(const id of ['similarTeam','similarPool','similarCount','similarRecords','similarStats'])$(id).onchange=renderSimilar;$('similarFocus').oninput=renderSimilar;$('similarMinGames').oninput=renderSimilar;$('gameTeam').onchange=renderGames;$('game').onchange=renderGameCard;$('rankingScope').onchange=()=>{populateRankingTeams();renderCombined()};$('rankingTeamA').onchange=()=>{populateRankingTeams();renderCombined()};for(const id of ['rankingTeamB','rankingOrder','rankingCount'])$(id).onchange=renderCombined;$('allRankingYears').onclick=()=>{rankingYears=new Set(rankingYears.size===years.length?[]:years);renderRankingYears();populateRankingTeams();renderCombined()};for(const id of ['timelineA','timelineB','metric'])$(id).onchange=renderTimeline;window.onhashchange=()=>setView(location.hash.slice(1));const pending=rows.filter(r=>!outcome(r)).length;$('status').textContent=`${rows.length.toLocaleString()} team-game records · ${Object.keys(results).length.toLocaleString()} official results matched${pending?' · '+pending.toLocaleString()+' team outcomes awaiting lookup':''}`;setView(location.hash.slice(1));
  }catch(e){console.error(e);$('status').textContent='Could not load team data. Refresh to retry. '+e.message}}
 init();
+
 
 
 
