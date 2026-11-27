@@ -25,7 +25,8 @@ th button{font:inherit;text-transform:inherit;letter-spacing:inherit;background:
 .team-sim-compact-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-top:18px}.team-sim-column-scroll{overflow-x:auto;min-width:0}.team-sim-compact-table{min-width:430px}.team-sim-compact-table .comparable-rank-col{width:18px}.team-sim-compact-table .comparable-number-col{width:43px}.team-sim-compact-table th{font-size:7px;padding:7px 3px;letter-spacing:0}.team-sim-compact-table th small{font-size:7px;margin-top:2px}.team-sim-compact-table td{padding:7px 3px;font-size:10px;height:60px}.team-sim-compact-table .team-comparable-name{gap:6px;align-items:center}.team-sim-compact-table .team-comparable-name .team-logo{width:23px;height:23px;flex-basis:23px}.team-sim-compact-table .team-comparable-name strong{font-size:11px;line-height:1.2}.team-sim-compact-table .team-comparable-name small{font-size:8px;line-height:1.25;margin-top:3px}.team-sim-compact-table .team-comparable-match{font-size:14px}.team-sim-compact-table .team-comparable-magpie{font-size:10px}.team-sim-record{font-size:12px;font-weight:700;color:var(--gold);margin:5px 0 0}@media(max-width:760px){.team-sim-compact-columns{grid-template-columns:1fr;gap:12px}.team-sim-compact-table{min-width:430px}}
 
 
-/* Inline season markers preserve comparison row height. */
-.season-badges{display:inline-flex;align-items:center;gap:4px;margin-left:6px;vertical-align:middle}
-.season-badge,.team-sim-feature .season-badge{display:inline;border:0;background:none;padding:0;margin:0;font:700 10px/1 Arial,sans-serif;letter-spacing:.2px;color:#6bd9c4;white-space:nowrap}
-.cup-badge,.team-sim-feature .cup-badge{color:#ffe39a;font-size:12px}
+/* Season results use colour without adding height to comparison rows. */
+#similarCard .season-playoffs,#compareCard .season-playoffs{color:#60dfc2}
+#similarCard .season-cup,#compareCard .season-cup{color:#ffd16b}
+.season-key{display:flex;justify-content:center;flex-wrap:wrap;gap:20px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:12px}
+.season-key span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px}
